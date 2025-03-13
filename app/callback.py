@@ -12,9 +12,7 @@ CALLBACK_STORAGE = []  # Simula um banco de dados em memória
 
 @router.post("/")
 async def receive_callback(request: Request):
-    """
-    Endpoint que recebe callbacks da BMP.
-    """
+    """baasdoban-gegnf7ghaegxaaa0.brazilsouth-01.azurewebsites.net/callback"""
     try:
         callback_data = await request.json()
 
