@@ -1,15 +1,34 @@
-from fastapi import FastAPI
-from app.handshake import router as handshake_router
-from app.callback import router as callback_router
-from app.teste import router as teste_router 
+from teste import ItemPayload
+from fastapi import FastAPI, Request, HTTPException
+from teste import ItemPayload
+import hmac
+import hashlib
+import base64
+import os
 
-app = FastAPI(title="Minha API de Integração")
+app = FastAPI()
 
-# Incluindo as rotas
-app.include_router(handshake_router, prefix="/handshake", tags=["Handshake"])
-app.include_router(callback_router, prefix="/callback", tags=["Callback"])
-app.include_router(teste_router, prefix="/teste", tags=["Teste"])
 
-@app.get("/")
-async def root():
-    return {"message": "API de Integração rodando!"}
+# Chave secreta HMAC (em um ambiente real, armazene isso em uma variável de ambiente segura)
+HMAC_SECRET = os.getenv("HMAC_SECRET", "sua_chave_super_secreta")
+
+def verify_hmac_signature(data: str, received_signature: str) -> bool:
+    """Valida a assinatura HMAC da requisição"""
+    computed_hmac = hmac.new(HMAC_SECRET.encode(), data.encode(), hashlib.sha256).digest()
+    computed_signature = base64.b64encode(computed_hmac).decode()
+    return hmac.compare_digest(computed_signature, received_signature)
+
+@app.post("/handshake")
+async def handshake(request: Request):
+    body = await request.body()
+    received_signature = request.headers.get("X-HMAC-Signature")
+    
+    expected_signature = base64.b64encode(hmac.new(HMAC_SECRET.encode(), body, hashlib.sha256).digest()).decode()
+    
+    print(f"Esperado: {expected_signature}")
+    print(f"Recebido: {received_signature}")
+
+    if not received_signature or not hmac.compare_digest(expected_signature, received_signature):
+        raise HTTPException(status_code=401, detail="Assinatura HMAC inválida")
+
+    return {"status": "OK"}
